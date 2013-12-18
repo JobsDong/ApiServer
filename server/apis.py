@@ -15,6 +15,7 @@ __author__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
 import json
 
+from search import search_product
 
 class api_route(object):
     """api的包装器
@@ -108,3 +109,12 @@ def result(code=200, message="success", dict_result=None):
 @api_route(r"/api/dummy")
 def api_dummy(params):
     return result(200, "success", params)
+
+
+@api_route(r"/api/search")
+def api_search(params):
+    if 'keyword' in params:
+        keyword = params['keyword']
+        return result(200, 'success', search_product(keyword))
+    else:
+        return result(400, 'fail', {'error': 'bad request'})
