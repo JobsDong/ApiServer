@@ -6,12 +6,16 @@
 
 __authors__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
+from io import BytesIO
 from tornado import httpclient
-from lxml import etree
+from lxml import html
+from search.utils import flist
+import urllib
 
 httpclient.AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
 BIJIAURL = "http://www.ssbjw.com/list.aspx"
+
 
 #TODO 加入Mysql, 实现自助抓取以及缓存
 #TODO 使用协程提高并发
@@ -25,11 +29,11 @@ def search_product(keyword=''):
     # 生成HTTP请求
     search_request = _search_request(keyword)
     # 请求
-    client = httpclient.AsyncHTTPClient()
+    client = httpclient.HTTPClient()
     response = client.fetch(search_request)
-
     # 解析结果
     return _parse_response(response)
+
 
 def _search_request(keyword):
     """生成搜索请求
@@ -38,7 +42,13 @@ def _search_request(keyword):
         Returns:
             request: HTTPRequest
     """
-    url = "%s?k=%s" % (BIJIAURL, keyword)
+    if isinstance(keyword, str):
+        keyword = keyword.decode('utf-8')
+    a = keyword.encode('unicode_escape')
+    print a, type(a)
+    b = a.replace(r'\u', r'%u')
+    url = "%s?k=%s" % (BIJIAURL, b)
+    print url
     return httpclient.HTTPRequest(url, method="GET")
 
 
@@ -69,6 +79,7 @@ def _parse_response(response):
 
     return result
 
+
 # 解析出url(好像用了MD5加密)
 def extract_html(html_body):
     """解析HTML
@@ -79,24 +90,25 @@ def extract_html(html_body):
     """
     product_list = []
     try:
-        tree = etree.parse(html_body)
+        tree = html.parse(BytesIO(html_body))
     except Exception, e:
         print "extract", e
-    products = tree.xpath("//table[@class='t1']/tbody/tr")
-    for product in products:
-        items = product.xpath("td")
-        image_url = items[0].xpath("a/img/@src")
-        title = items[1].xpath("a/@title")
-        price = items[3].xpath("span/text()")
-        sales = items[4].xpath("span/text()")
-        source = items[5].xpath("a/@title")
-        stars = items[7].xpath("span/@class")
-        product_list.append({
-            'image_url': image_url,
-            'title': title,
-            'price': price,
-            'sales': sales,
-            'source': source,
-            'stars': stars,
-        })
-    return product_list
+    else:
+        products = tree.xpath("//table[@class='t1']/tr")
+        for product in products:
+            items = product.xpath("td")
+            image_url = flist(items[0].xpath("a/img/@src"), '')
+            title = flist(items[1].xpath("a/@title"), '')
+            price = flist(items[3].xpath("span/text()"), '')
+            sales = flist(items[4].xpath("span/text()"), '')
+            source = flist(items[5].xpath("a/@title"), '')
+            stars = flist(items[7].xpath("span/@class"), '')
+            product_list.append({
+                'image_url': image_url,
+                'title': title,
+                'price': price,
+                'sales': sales,
+                'source': source,
+                'stars': stars,
+            })
+        return product_list
