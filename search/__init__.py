@@ -45,10 +45,8 @@ def _search_request(keyword):
     if isinstance(keyword, str):
         keyword = keyword.decode('utf-8')
     a = keyword.encode('unicode_escape')
-    print a, type(a)
-    b = a.replace(r'\u', r'%u')
-    url = "%s?k=%s" % (BIJIAURL, b)
-    print url
+    params = urllib.quote(a).replace('%5C', '%')
+    url = "%s?k=%s" % (BIJIAURL, params)
     return httpclient.HTTPRequest(url, method="GET")
 
 
