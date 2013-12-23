@@ -7,6 +7,7 @@
 __authors__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
 from io import BytesIO
+import base64
 from tornado import httpclient
 from lxml import html
 from search.utils import flist
@@ -97,16 +98,43 @@ def extract_html(html_body):
             items = product.xpath("td")
             image_url = flist(items[0].xpath("a/img/@src"), '')
             title = flist(items[1].xpath("a/@title"), '')
+            temp_url = flist(items[1].xpath("a/@onclick"), '')
+            url = extract_url(temp_url, encoding='gb2312')
             price = flist(items[3].xpath("span/text()"), '')
             sales = flist(items[4].xpath("span/text()"), '')
             source = flist(items[5].xpath("a/@title"), '')
-            stars = flist(items[7].xpath("span/@class"), '')
+            temp_stars = flist(items[7].xpath("span/@class"), '')
+            stars = _extract_stars(temp_stars)
             product_list.append({
                 'image_url': image_url,
                 'title': title,
+                'url': url,
                 'price': price,
                 'sales': sales,
                 'source': source,
                 'stars': stars,
             })
         return product_list
+
+
+def extract_url(url, encoding='utf-8'):
+    """解析出url
+        Args:
+            url: str, 获得的onclick的数据
+        Returns:
+            url: str, 解析出来的url
+    """
+    temp_url = url.replace("GoUrl('", "").replace("')", "")
+    decoded_url = base64.b64decode(temp_url)
+    return decoded_url.decode(encoding).encode('utf-8')
+
+
+def _extract_stars(stars):
+    """解析出推荐星级
+        Args:
+            stars: str, 星级
+        Returns:
+            stars: int, 星级
+    """
+    num = stars.replace('star', '')
+    return int(num)
