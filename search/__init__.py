@@ -8,7 +8,7 @@ __authors__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
 from io import BytesIO
 import base64
-from tornado import httpclient
+from tornado import httpclient, gen
 from lxml import html
 from search.utils import flist
 import urllib
@@ -19,7 +19,7 @@ BIJIAURL = "http://www.ssbjw.com/list.aspx"
 
 
 #TODO 加入Mysql, 实现自助抓取以及缓存
-#TODO 使用协程提高并发
+@gen.coroutine
 def search_product(keyword=''):
     """搜索函数
         Args:
@@ -30,10 +30,11 @@ def search_product(keyword=''):
     # 生成HTTP请求
     search_request = _search_request(keyword)
     # 请求
-    client = httpclient.HTTPClient()
-    response = client.fetch(search_request)
+    client = httpclient.AsyncHTTPClient()
+    response = yield client.fetch(search_request)
     # 解析结果
-    return _parse_response(response)
+    parsed_response = _parse_response(response)
+    raise gen.Return(parsed_response)
 
 
 def _search_request(keyword):
