@@ -13,9 +13,10 @@
 
 __author__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
-import json
+from tornado import gen
 
 from search import search_product
+
 
 class api_route(object):
     """api的包装器
@@ -55,7 +56,7 @@ def not_found(path):
         Returns:
             result:Result
     """
-    return result(code=404, message="not found", dict_result={"path": path})
+    raise result(code=404, message="not found", dict_result={"path": path})
 
 
 def not_support_get(path):
@@ -101,20 +102,25 @@ def result(code=200, message="success", dict_result=None):
     """
     if dict_result is None:
         dict_result = dict()
-    encoded_result = json.dumps({"code": code, "message": message, "result": dict_result},
-                                ensure_ascii=False, encoding="utf8")
+    encoded_result = {"code": code, "message": message, "result": dict_result}
     return encoded_result
 
 
 @api_route(r"/api/dummy")
+@gen.coroutine
 def api_dummy(params):
-    return result(200, "success", params)
+    raise gen.Return(result(200, "success", params))
+
 
 
 @api_route(r"/api/search")
+@gen.coroutine
 def api_search(params):
     if 'keyword' in params:
         keyword = params['keyword']
-        return result(200, 'success', search_product(keyword))
+        print "begin search"
+        search_result = yield search_product(keyword)
+        print "end search"
+        raise gen.Return(result(200, 'success', search_result))
     else:
-        return result(400, 'fail', {'error': 'bad request'})
+        raise gen.Return(result(400, 'fail', {'error': 'bad request'}))

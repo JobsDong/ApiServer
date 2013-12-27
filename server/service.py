@@ -8,7 +8,7 @@ __authors__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
 import threading
 import json
-from tornado import ioloop, web
+from tornado import ioloop, web, gen
 
 from server.utils import unicode2str_for_dict
 from server import apis
@@ -34,20 +34,35 @@ class WebService(object):
 
 
 class ApiHandler(web.RequestHandler):
-    def get(self, *args, **kwargs):
-        return self.post(*args, **kwargs)
 
+    @web.asynchronous
+    @gen.coroutine
+    def get(self, *args, **kwargs):
+        self.post(*args, **kwargs)
+
+    @web.asynchronous
+    @gen.coroutine
     def post(self, *args, **kwargs):
         path = self.request.path
-        if not apis.api_route.get_api_routes().has_key(path):
+        if path not in apis.api_route.get_api_routes():
             result = apis.not_found(path)
         else:
             method = apis.api_route.get_api_routes()[path]
             params = build_params(self.request.arguments, self.request.body)
-            result = method(params)
+            print self._finished
+            result = yield gen.Task(method, params)
+        print self._finished
         self.set_header("Content-Type", "application/json; charset=utf8")
-        self.write(result)
-
+        print self._finished
+        try:
+            print self._finished
+            self.write(result)
+            print self._finished
+        except Exception, e:
+            print e
+        print result
+        self.finish()
+        print self._finished
 
 def build_params(arguments, body):
     """从url，query和body中获取参数
