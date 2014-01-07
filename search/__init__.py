@@ -80,7 +80,7 @@ def _parse_response(response):
     return result
 
 
-# 解析出url(好像用了MD5加密)
+# 解析出url
 def extract_html(html_body):
     """解析HTML
         Args:

@@ -35,12 +35,20 @@ class WebService(object):
 
 class ApiHandler(web.RequestHandler):
 
-    @web.asynchronous
     @gen.coroutine
     def get(self, *args, **kwargs):
-        self.post(*args, **kwargs)
+        path = self.request.path
+        print path
+        if path not in apis.api_route.get_api_routes():
+            result = apis.not_found(path)
+        else:
+            method = apis.api_route.get_api_routes()[path]
+            params = build_params(self.request.arguments, self.request.body)
+            result = yield method(params)
+        self.set_header("Content-Type", "application/json; charset=utf8")
+        self.write(result)
+        self.finish()
 
-    @web.asynchronous
     @gen.coroutine
     def post(self, *args, **kwargs):
         path = self.request.path
@@ -49,20 +57,11 @@ class ApiHandler(web.RequestHandler):
         else:
             method = apis.api_route.get_api_routes()[path]
             params = build_params(self.request.arguments, self.request.body)
-            print self._finished
-            result = yield gen.Task(method, params)
-        print self._finished
+            result = yield method(params)
         self.set_header("Content-Type", "application/json; charset=utf8")
-        print self._finished
-        try:
-            print self._finished
-            self.write(result)
-            print self._finished
-        except Exception, e:
-            print e
-        print result
+        self.write(result)
         self.finish()
-        print self._finished
+
 
 def build_params(arguments, body):
     """从url，query和body中获取参数

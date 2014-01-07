@@ -14,6 +14,7 @@
 __author__ = ['"wuyadong" <wuyadong@tigerknows.com>']
 
 from tornado import gen
+import json
 
 from search import search_product
 
@@ -49,6 +50,23 @@ class api_route(object):
         return cls._api_methods
 
 
+def result(code=200, message="success", dict_result=None):
+    """将计算的结果组织成json格式
+        Args:
+            code: int, 错误码
+            message: str, 信息
+            result: str, 结果
+
+        Returns:
+            encoded_result: str, 被jsondump后的数据
+    """
+    if dict_result is None:
+        dict_result = dict()
+    encoded_result = json.dumps({"code": code, "message": message, "result": dict_result},
+                                ensure_ascii=False, encoding="utf8")
+    return encoded_result
+
+
 def not_found(path):
     """返回notfound结果
         Args:
@@ -56,7 +74,7 @@ def not_found(path):
         Returns:
             result:Result
     """
-    raise result(code=404, message="not found", dict_result={"path": path})
+    return result(code=404, message="not found", dict_result={"path": path})
 
 
 def not_support_get(path):
@@ -90,27 +108,10 @@ def check_params(params, *args):
         return True, errors
 
 
-def result(code=200, message="success", dict_result=None):
-    """将计算的结果组织成json格式
-        Args:
-            code: int, 错误码
-            message: str, 信息
-            result: str, 结果
-
-        Returns:
-            encoded_result: str, 被jsondump后的数据
-    """
-    if dict_result is None:
-        dict_result = dict()
-    encoded_result = {"code": code, "message": message, "result": dict_result}
-    return encoded_result
-
-
 @api_route(r"/api/dummy")
 @gen.coroutine
 def api_dummy(params):
     raise gen.Return(result(200, "success", params))
-
 
 
 @api_route(r"/api/search")
@@ -118,9 +119,7 @@ def api_dummy(params):
 def api_search(params):
     if 'keyword' in params:
         keyword = params['keyword']
-        print "begin search"
         search_result = yield search_product(keyword)
-        print "end search"
         raise gen.Return(result(200, 'success', search_result))
     else:
         raise gen.Return(result(400, 'fail', {'error': 'bad request'}))
